@@ -31,14 +31,16 @@ class AccountUserManager(BaseUserManager):
 class UserRole(models.TextChoices):
     ADMIN = 'ADMIN', 'Administrator'
     PARISH_PRIEST = 'PARISH_PRIEST', 'Parish Priest'
-    BODY_MEMBER = 'BODY_MEMBER', 'Body Member'
     FAMILY_HEAD = 'FAMILY_HEAD', 'Family Head'
+    FAMILY_MEMBER = 'FAMILY_MEMBER', 'Family Member'
 
 
-class BodyMemberSubRole(models.TextChoices):
+class BodyMemberPosition(models.TextChoices):
     PRESIDENT = 'PRESIDENT', 'President'
     VICE_PRESIDENT = 'VICE_PRESIDENT', 'Vice President'
     TREASURER = 'TREASURER', 'Treasurer'
+    SECRETARY = 'SECRETARY', 'Secretary'
+    MEMBER = 'MEMBER', 'Member'
 
 
 def validate_indian_mobile(value):
@@ -46,7 +48,7 @@ def validate_indian_mobile(value):
     Validates Indian 10-digit mobile numbers.
     Must start with 6, 7, 8, or 9 and be exactly 10 digits long.
     """
-    pattern = re.compile(r'^[6-9]\d{9}$')
+    pattern = re.compile(r'^[6-9]\\d{9}$')
     if not pattern.match(value):
         raise ValidationError('Enter a valid 10-digit Indian mobile number (starting with 6–9).')
 
@@ -59,18 +61,24 @@ class AccountUser(AbstractUser):
         choices=UserRole.choices,
         default=UserRole.FAMILY_HEAD
     )
-    sub_role = models.CharField(
+    # Body member fields - separate from family role
+    is_body_member = models.BooleanField(
+        default=False,
+        help_text="Is this user a member of the church body/committee?"
+    )
+    body_member_position = models.CharField(
         max_length=30,
-        choices=BodyMemberSubRole.choices,
+        choices=BodyMemberPosition.choices,
         blank=True,
         null=True,
-        help_text="Optional sub-role if role is BODY_MEMBER"
+        help_text="Position in the church body (if is_body_member is True)"
     )
     phone_number = models.CharField(max_length=10,
                                     unique=True,
                                     validators=[validate_indian_mobile],
-                                    help_text="10-digit Indian mobile number starting with 6-9")
+                                    help_text="10-digit Indian mobile number starting with 6-9. Used for WhatsApp.")
     address = models.TextField(blank=True)
+    family = models.ForeignKey('families.Family', on_delete=models.SET_NULL, null=True, blank=True, related_name='members')
     
     # override groups and permissions to avoid clashes with AbstractUser
     groups = models.ManyToManyField(
@@ -98,5 +106,5 @@ class AccountUser(AbstractUser):
     
     def clean(self):
         super().clean()
-        if self.sub_role and self.role != UserRole.BODY_MEMBER:
-            raise ValidationError("Sub-role can only be set for Body Members")
+        if self.body_member_position and not self.is_body_member:
+            raise ValidationError("Body member position can only be set if is_body_member is True")

@@ -39,7 +39,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'accounts',
+    'events',
+    'families',
+    'sacraments',
+    'simple_history',
 ]
+
+# WhatsApp Configuration
+WHATSAPP_API_KEY = 'your_api_key_here'
+WHATSAPP_API_URL = 'https://graph.facebook.com/v17.0/YOUR_PHONE_NUMBER_ID/messages'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
